@@ -1,0 +1,34 @@
+Name: ntrdma
+Version: 0.0.1
+Release: 1%{?dist}
+Summary: PCIe NTB RDMA Userspace Driver
+
+Group: System Environment/Libraries
+License: EMC Proprietary
+Url:
+Source:
+BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+
+BuildRequires: libibverbs-devel >= 1.1-0.1.rc2
+
+%description
+
+%prep
+%setup -q -n %{name}-@VERSION@
+
+%build
+%configure
+make %{?_smp_mflags}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make DESTDIR=%{buildroot} install
+rm -f $RPM_BUILD_ROOT%{_libdir}/*.la $RPM_BUILD_ROOT%{_libdir}/libmlx5.so
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%{_libdir}/libntrdma.so
+

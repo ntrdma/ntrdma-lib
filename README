@@ -1,0 +1,15 @@
+
+BUILD COMMANDS
+libtoolize
+        - generate ltmain.sh based on configure.in
+acloal
+        - generate aclocal.m4 basec on configure.in
+autoconf
+        - generate configure script based on configure.in
+autoheader
+        - generate configure.h.in based on configure.in
+automake --add-missing
+        - generate Makefile.in from Makefile.am and configure.h.in
+        - (and add missing files)
+./configure
+        - generate Makefile based on Makefile.in
