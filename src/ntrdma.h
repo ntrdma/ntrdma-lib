@@ -49,7 +49,7 @@
 #endif
 
 struct ntrdma_dev {
-	struct ibv_device	ibdev;
+	struct verbs_device	ibdev;
 };
 
 static inline struct ntrdma_dev *to_ntrdma_dev(struct ibv_device *ibdev)

@@ -36,7 +36,9 @@
 #include <string.h>
 #include "ntrdma.h"
 
-static struct ibv_context *ntrdma_alloc_context(struct ibv_device *ibdev,
+#define NTRDMA_ABI_VERSION (1)
+
+static struct ibv_context *ntrdma_alloc_context(struct verbs_device *ibdev,
 						int cmd_fd)
 {
 	struct ibv_context *ibctx;
@@ -87,37 +89,53 @@ static void ntrdma_free_context(struct ibv_context *ibctx)
 	free(ibctx);
 }
 
-static struct ibv_device *ntrdma_driver_init(const char *uverbs_sys_path,
-					     int abi_version)
+static struct verbs_device *ntrdma_alloc_device(struct verbs_sysfs_dev *sysfs_dev)
 {
-	char value[32];
-	int ibdevno;
 	struct ntrdma_dev *dev;
-	struct ibv_device *ibdev;
 
-	fprintf(stderr, "%s(\"%s\", %d)\n", __FUNCTION__,
-		uverbs_sys_path, abi_version);
-
-	if (ibv_read_sysfs_file(uverbs_sys_path, "ibdev",
-				value, sizeof(value)) < 0)
-		return NULL;
-	if (sscanf(value, "ntrdma_%i", &ibdevno) != 1)
-		return NULL;
-
-	dev = malloc(sizeof *dev);
+	dev = malloc(sizeof(*dev));
 	if (!dev)
 		return NULL;
 
 	memset(dev, 0, sizeof(*dev));
-	ibdev = &dev->ibdev;
 
-	ibdev->ops.alloc_context	= ntrdma_alloc_context;
-	ibdev->ops.free_context		= ntrdma_free_context;
-
-	return ibdev;
+	return &dev->ibdev;
 }
 
-static __attribute__((constructor)) void ntrdma_register_driver(void)
+static void ntrdma_uninit_device(struct verbs_device *device)
 {
-	ibv_register_driver("ntrdma", ntrdma_driver_init);
+	struct ntrdma_dev *dev;
+
+	dev = container_of(device, struct ntrdma_dev, ibdev);
+
+	free(dev);
 }
+
+static bool ntrdma_device_match(struct verbs_sysfs_dev *sysfs_dev)
+{
+	char value[32];
+	int ibdevno;
+
+	if (ibv_read_sysfs_file(sysfs_dev->sysfs_path, "ibdev",
+					value, sizeof(value)) < 0)
+			return false;
+
+	if (sscanf(value, "ntrdma_%i", &ibdevno) != 1)
+			return false;
+
+	return true;
+}
+
+
+static const struct verbs_device_ops ntrdma_dev_ops = {
+		.name = "ntrdma",
+		.match_min_abi_version = NTRDMA_ABI_VERSION,
+		.match_max_abi_version = NTRDMA_ABI_VERSION,
+		.match_device = ntrdma_device_match,
+		.alloc_device = ntrdma_alloc_device,
+		.uninit_device = ntrdma_uninit_device,
+		.alloc_context = ntrdma_alloc_context,
+		.free_context = ntrdma_free_context,
+};
+
+PROVIDER_DRIVER(ntrdma_dev_ops);
